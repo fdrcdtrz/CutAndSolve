@@ -192,13 +192,21 @@ def compute_total_value_comparabile(service_requests, services, resources, item_
     return suboptimal_solutions
 
 
-def save_suboptimal_solutions(pareto_solutions, filename="suboptimal_solutions.csv"):
-    pareto_solutions.sort()
+def save_suboptimal_solutions(pareto_solutions, results_dir, filename="suboptimal_solutions.csv"):
+    # Assicurati che la cartella esista
+    os.makedirs(results_dir, exist_ok=True)
 
-    with open(filename, mode='w', newline='') as file:
+    # Crea il percorso completo del file
+    filepath = os.path.join(results_dir, filename)
+
+    # Salva il file
+    pareto_solutions.sort()
+    with open(filepath, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["KPI_Totale", "KVI_Totale"])
         writer.writerows(pareto_solutions)
+
+    print(f"File salvato in: {filepath}")
 
 
 #########

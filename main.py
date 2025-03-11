@@ -1,6 +1,6 @@
 import os
 import time
-
+import argparse
 import numpy as np
 
 from benchmark import *
@@ -196,14 +196,31 @@ class Resource:
         self.likelihood = value
 
 
+# --- Parsing degli argomenti da riga di comando ---
+parser = argparse.ArgumentParser()
+parser.add_argument("--num_services_list", type=str, default="[5]")
+parser.add_argument("--num_resources", type=int, default=5)
+parser.add_argument("--delta", type=float, default=0.1)
+parser.add_argument("--weights_kvi", type=str, default="1/3,1/3,1/3")
+parser.add_argument("--alpha", type=float, default=0.5)
+
+args = parser.parse_args()
+
+# Converti gli argomenti nei formati appropriati
+num_services_list = eval(args.num_services_list)  # Converti stringa in lista
+num_resources = args.num_resources
+delta = args.delta
+weights_kvi = list(map(lambda x: eval(x.strip()), args.weights_kvi.split(",")))
+alpha = args.alpha
+
 if __name__ == '__main__':
 
-    num_services_list = [5]
+    # num_services_list = [5]
     num_services_type = 8
-    delta = 0.1
-    num_resources = 5
+    # delta = 0.1
+    # num_resources = 5
     weights_kpi = [1 / 3, 1 / 3, 1 / 3]
-    weights_kvi = [1 / 3, 1 / 3, 1 / 3]
+    # weights_kvi = [1 / 3, 1 / 3, 1 / 3]
 
     deadlines = [0.002, 0.5, 1, 10, 15]
     deadlines_req = [0.02, 0.6, 1.2, 50]
@@ -212,17 +229,16 @@ if __name__ == '__main__':
     data_rates = [70.0, 100.0, 100.0, 250.0]
     data_rates_req = [45.0, 60.0, 80.0, 95.0]
     sizes = [600e6, 1e9, 1e9, 1.2e9]  # Mb
-    #p_s_values = [2, 2, 3, 4]
+    # p_s_values = [2, 2, 3, 4]
     demand_values = [2, 4, 6, 10]
     impact_values = [0.25, 0.5, 0.75, 1]
     # risk_appetite_values = [1, 2, 2, 3]
-
 
     services = []
     for i in range(num_services_type):
         chosen_index = i % len(demand_values)
 
-        service = Service(i, 0, 0, 0,0, 0, 0, 0,
+        service = Service(i, 0, 0, 0, 0, 0, 0, 0,
                           0, weights_kpi, weights_kvi, 0)
 
         deadline = deadlines[chosen_index]
@@ -230,7 +246,6 @@ if __name__ == '__main__':
         plr_req = plrs_req[chosen_index]
         data_rate = data_rates[chosen_index]
         impact = impact_values[chosen_index]
-
 
         if deadline > 9:
             deadline_req = deadlines_req[len(deadlines_req) - 1]
@@ -254,16 +269,16 @@ if __name__ == '__main__':
               f"{services[i].kpi_service}, {services[i].kpi_service_req}, {services[i].kvi_service}, {services[i].kvi_service_req}, "
               f"{services[i].size}")
 
-
     for num_services in num_services_list:
-        results_dir = f"test_benchmark_{num_services}_200_{delta}_1"
+        results_dir = f"results_{num_services}_{num_resources}_{delta}_1"
         # path_onedrive = r"C:\Users\Federica\OneDrive - Politecnico di Bari\phd\works\comnet\Simulazioni"
-        path_locale = r"C:\Users\Federica de Trizio\PycharmProjects\CutAndSolve"
+        #path_locale = r"C:\Users\Federica de Trizio\PycharmProjects\CutAndSolve"
+        path_locale = r"C:\Users\Federica\PycharmProjects\CutAndSolve"
         full_path = os.path.join(path_locale, results_dir)
         os.makedirs(full_path, exist_ok=True)
 
         # Probabilità assegnate ai servizi
-        probabilities = [1, 1, 1, 3, 4, 5, 6, 7, 8, 8]
+        probabilities = [1, 1, 1, 3, 4, 5, 6, 7, 0, 0]
         service_requests = []
 
         # Generazione delle richieste basate sulla distribuzione
@@ -275,7 +290,8 @@ if __name__ == '__main__':
         start = time.time()
 
         availability_values = [10, 20, 20, 50]
-        carbon_offset_values = [(1.5*1e6) / 365, (2*1e6) / 365, (2*1e6) / 365, (2.5*1e6) / 365]  # x grammi * 10^6 (ton) /365 gg as avg, con x = [1.5, 2, 2.5]
+        carbon_offset_values = [(1.5 * 1e6) / 365, (2 * 1e6) / 365, (2 * 1e6) / 365,
+                                (2.5 * 1e6) / 365]  # x grammi * 10^6 (ton) /365 gg as avg, con x = [1.5, 2, 2.5]
         P_c_values = [0.01, 0.02, 0.02, 0.04]
         u_c_values = [0.1, 0.5, 0.8, 1]
         P_m_values = [0.1, 0.15, 0.15, 0.2]
@@ -329,7 +345,6 @@ if __name__ == '__main__':
 
             resources.append(resource)
 
-
         for resource in resources:
             print(resource.id, resource.availability, resource.kpi_resource, resource.fpc,
                   resource.P_m, resource.P_c, resource.lambda_services_per_hour, resource.likelihood)
@@ -343,12 +358,13 @@ if __name__ == '__main__':
         for service in services:
             for resource in resources:
                 computation_time = compute_computation_time(service, resource)
-                print(computation_time)
+                #print(computation_time)
 
         # TIS:  trustworthiness inclusiveness sustainability
         normalized_kvi, weighted_sum_kvi = compute_normalized_kvi(services, resources, CI=475, signs=[1, -1, -1])  #
 
-        normalized_kpi, weighted_sum_kpi = compute_normalized_kpi(services, resources, signs=[-1, 1, -1])  # latenza, data rate e plr
+        normalized_kpi, weighted_sum_kpi = compute_normalized_kpi(services, resources,
+                                                                  signs=[-1, 1, -1])  # latenza, data rate e plr
 
         ############## METODO EPSILON-CONSTRAINT: CALCOLO IDEAL E NADIR POINTS E IMPLEMENTAZIONE DEL METODO ESATTO
 
@@ -373,7 +389,6 @@ if __name__ == '__main__':
         # pareto_filename = os.path.join(results_dir, "pareto_solutions.csv")
         # save_pareto_solutions(pareto_solutions_exact, filename=pareto_filename)
 
-
         ############ APPROCCI BENCHMARK: GREEDY ASSIGNMENT KPI E RANDOM ASSIGNMENT
 
         assignment, total_kpi, total_kvi = greedy_assignment_kpi(service_requests, services, resources,
@@ -388,7 +403,8 @@ if __name__ == '__main__':
         assignment, total_kpi, total_kvi = random_assignment(service_requests, services, resources, weighted_sum_kpi,
                                                              weighted_sum_kvi)
 
-        print(f"Assignment: {assignment}, Total KPI: {total_kpi}, Total KVI: {total_kvi}, service_requests: {service_requests}")
+        print(
+            f"Assignment: {assignment}, Total KPI: {total_kpi}, Total KVI: {total_kvi}, service_requests: {service_requests}")
 
         save_assignment_results(service_requests, assignment, services, resources, weighted_sum_kpi,
                                 weighted_sum_kvi, normalized_kpi, normalized_kvi, total_kpi, total_kvi,
@@ -432,11 +448,11 @@ if __name__ == '__main__':
                                                 weighted_sum_kvi,
                                                 results_dir=results_dir, filename=f"alpha_{alpha}_iteration_{k}.csv"
                                                 )
-                    suboptimal_solutions = compute_total_value_comparabile(service_requests, services, resources, item_assignment,
-                                                    weighted_sum_kpi, weighted_sum_kvi)
+                    suboptimal_solutions = compute_total_value_comparabile(service_requests, services, resources,
+                                                                           item_assignment,
+                                                                           weighted_sum_kpi, weighted_sum_kvi)
 
-                    save_suboptimal_solutions(suboptimal_solutions, filename=f"alpha_{alpha}_iteration_{k}.csv")
-
+                    save_suboptimal_solutions(suboptimal_solutions, results_dir=results_dir, filename=f"alpha_{alpha}_iteration_{k}.csv")
 
                     break
 
